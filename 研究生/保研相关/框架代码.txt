@@ -1,0 +1,140 @@
+————————————————库:———————————————
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.utils import shuffle
+import os
+import urllib.request
+
+————————————————基本:———————————————
+#常量：
+x=tf.constant(1)
+#变量：
+x=tf.Variable(0,name='x')
+
+#分类模式下的W，b
+W=tf.Variable(tf.random_normal([784,10]),name='W')
+W1=tf.Variable(tf.truncated_normal([784,H1_NN],stddev=0.1))
+b=tf.Variable(tf.zeros([10]),name='b')
+
+#占位符
+x=tf.placeholder("float",name="x")
+x=tf.placeholder(tf.float32,[None,784],name="X")
+
+#定义损失函数
+with tf.name_scope("LossFunction"):
+    loss_function=tf.reduce_mean(tf.pow(y-pred,2)) #均方误差
+    loss_function=tf.reduce_mean(-tf.reduce_sum(y*tf.log(pred),reduction_indices=1))#交叉熵
+    loss_function=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=forward,labels=y)#另一种交叉熵损失函数定义方法(避免log(0)造成的不稳定性)
+
+#创建优化器
+optimizer=tf.train.GradientDescentOptimizer(learning_rate).minimize(loss_function)#梯度下降优化器
+optimizer=tf.train.AdamOptimizer(learning_rate).minimize(loss_function)#Adam优化器
+
+断点续训：参考mnist_8
+
+————————————————全连接神经网路———————————————
+#定义全连接层函数
+def fcn_layer(inputs,         #输入数据
+             input_dim,       #输入神经元数量
+             output_dim,      #输出神经元数量
+             activation=None):#激活函数
+    
+    W=tf.Variable(tf.truncated_normal([input_dim,output_dim],stddev=0.1))
+    b=tf.Variable(tf.zeros([output_dim]))
+    
+    XWb=tf.matmul(inputs,W)+b
+    if activation is None:#默认不使用激活函数
+        outputs=XWb
+    else:
+        outputs=activation(XWb)
+    return outputs
+#使用方法
+H1_NN=256
+H2_NN=64
+
+#构建输入层
+x=tf.placeholder(tf.float32,[None,784],name="X")
+
+#构建隐藏层1
+h1=fcn_layer(x,784,H1_NN,tf.nn.relu)
+#构建隐藏层2
+h2=fcn_layer(h1,H1_NN,H2_NN,tf.nn.relu)
+
+#构建输出层
+forward=fcn_layer(h2,H2_NN,10,None)
+pred=tf.nn.softmax(forward)
+
+————————————————keras模型:———————————————
+model=tf.keras.models.Sequential()
+
+#加入第一层
+model.add(tf.keras.layers.Dense(units=64,
+                                input_dim=7,
+                               use_bias=True,
+                               kernel_initializer='uniform',
+                               bias_initializer='zeros',
+                               activation='relu'))#激活函数
+model.add(tf.keras.layers.Dense(units=32,
+                               activation='sigmoid'))
+model.add(tf.keras.layers.Dense(units=1,
+                                activation='sigmoid'))
+
+
+(sigmoid作为激活函数，损失函数选用binary_crossentropy;
+ softmax作为激活函数，损失函数选用categorical_crossentropy)
+
+model.compile(optimizer=tf.keras.optimizers.Adam(0.003),
+             loss='binary_crossentropy',
+             metrics=['accuracy'])
+
+#训练模型
+train_history=model.fit(x=x_train,#输入的特征数据
+                        y=y_train,#标签数据
+                        validation_split=0.2,#验证集所占比例
+                        epochs=100,
+                        batch_size=40,
+                        verbose=2)#训练过程显示模式(0:不显示，1：带进度条模式，2：每epoch显示一行)
+
+————————————————超参数:———————————————
+#迭代轮次：
+train_epochs=50
+#单次训练样本数：
+batch_size=100
+#一轮训练多少批次：
+total_batch=int(mnist.train.num_examples/batch_size)
+#显示粒度:
+display_step=1
+#学习率:
+learning_rate=0.01
+
+
+
+
+————————————————tensorboard:———————————————
+import tensorflow as tf
+
+tf.reset_default_graph()
+
+logdir='F:\log'
+
+tf.summary.image('input',image_shaped_input,10)#图像
+tf.summary.scalar('accuracy',accuracy)#标量
+tf.summary.histogram('forward',forward)#直方图
+merged_summary_op=tf.summary.merge_all()#打包(sess之后)
+
+writer=tf.summary.FileWriter(logdir,tf.get_default_graph())
+writer.close()
+
+
+#命令：tensorboard --logdir=F:\log
+
+
+————————————————matplotlib:———————————————
+%matplotlib inline
+
+#图像显示函数
+def plot_image(image):
+    plt.imshow(image.reshape(28,28),cmap='binary')
+    plt.show()
